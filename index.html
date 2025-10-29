@@ -1,1 +1,87 @@
-You are a 6
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate this photo</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'EB Garamond', serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            font-size: 8vw;
+            font-size: clamp(3rem, 8vw, 10rem);
+            text-align: center;
+            margin-bottom: 40px;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .upload-button {
+            font-family: 'EB Garamond', serif;
+            font-size: 1.5rem;
+            padding: 15px 40px;
+            background-color: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        
+        .upload-button:hover {
+            background-color: #555;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rate this photo</h1>
+    <label for="photo-upload" class="upload-button">
+        Upload Photo
+    </label>
+    <input type="file" id="photo-upload" accept="image/*">
+    
+    <script>
+        const fileInput = document.getElementById('photo-upload');
+        
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    sessionStorage.setItem('uploadedImageDataUrl', ev.target.result);
+                } catch (err) {
+                    console.error('Failed to store image in sessionStorage', err);
+                }
+                window.location.href = 'result/';
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
