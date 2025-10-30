@@ -22,21 +22,39 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
             padding: 20px;
             background-color: #f5f5f5;
+        }
+        
+        .main {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
         }
         
         h1 {
             font-size: 8vw;
             font-size: clamp(3rem, 8vw, 10rem);
             text-align: center;
-            margin-bottom: 40px;
             font-weight: 700;
             color: #333;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px; /* tighten distance to h2 */
         }
         
+        h2 {
+            font-size: clamp(1.1rem, 2.4vw, 1.75rem);
+            font-weight: 500;
+            color: #444;
+            text-align: center;
+            margin-bottom: 8px; /* spacing before button */
+        }
+
         .upload-button {
             font-family: 'EB Garamond', serif;
             font-size: 1.5rem;
@@ -57,14 +75,28 @@
         input[type="file"] {
             display: none;
         }
+        
+        footer.legal {
+            width: 100%;
+            max-width: 900px;
+            margin-top: auto; /* stick to bottom */
+            color: #666;
+            text-align: center;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            padding: 20px 10px 0;
+        }
     </style>
 </head>
 <body>
-    <h1>Rate this photo</h1>
-    <label for="photo-upload" class="upload-button">
-        Upload Photo
-    </label>
-    <input type="file" id="photo-upload" accept="image/*">
+    <main class="main">
+        <h1>Rate photo attractiveness with AI</h1>
+        <h2>For $1 you can evaluate 50 images</h2>
+        <label for="photo-upload" class="upload-button">
+            Upload Photo
+        </label>
+        <input type="file" id="photo-upload" accept="image/*">
+    </main>
     
     <script>
         const fileInput = document.getElementById('photo-upload');
@@ -80,5 +112,6 @@
             reader.readAsDataURL(file);
         });
     </script>
+    <footer class="legal">If you’re unhappy for any reason, email us at <a href="mailto:true00american@gmail.com">true00american@gmail.com</a> within 14 days of purchase and we’ll refund your payment in full.</footer>
 </body>
 </html>
