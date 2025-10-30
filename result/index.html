@@ -34,25 +34,12 @@
             height: auto;
             object-fit: contain;
             border-radius: 12px;
-            filter: grayscale(100%);
             display: block;
         }
         .image-wrap {
             position: relative;
             display: inline-block;
             overflow: hidden;
-        }
-        .corner-line {
-            position: absolute;
-            right: -50%;
-            top: -50%;
-            width: 40px;
-            height: 200%;
-            background: #000;
-            transform: rotate(45deg);
-            transform-origin: center;
-            border-radius: 2px;
-            pointer-events: none;
         }
         .caption {
             margin-top: 16px;
@@ -73,20 +60,16 @@
 <body>
     <div class="image-wrap">
         <img id="result-image" alt="Uploaded photo">
-        <div class="corner-line"></div>
     </div>
-    <div class="caption">Светлая память 🥀🥀🥀</div>
-    <a class="back-link" href="../">Еще кого-то похоронить</a>
+    <div class="caption" id="score-text">Processing...</div>
+    <a class="back-link" href="../">Upload another photo</a>
 
     <script>
         const imgDataUrl = sessionStorage.getItem('uploadedImageDataUrl');
         const imgEl = document.getElementById('result-image');
-        if (imgDataUrl) {
-            imgEl.src = imgDataUrl;
-        } else {
-            // No image in session, go back to upload
-            window.location.replace('../');
-        }
+        const scoreEl = document.getElementById('score-text');
+        imgEl.src = imgDataUrl || '';
+        scoreEl.textContent = `Your photo is better than ${sessionStorage.getItem('avgPooling')}% of others`;
     </script>
 </body>
 </html>
