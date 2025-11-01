@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ratemepls - Rate photo attractiveness with AI</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +21,33 @@
         body {
             font-family: 'EB Garamond', serif;
             min-height: 100vh;
+        }
+        
+        /* Page sections */
+        .page-section {
+            display: none;
+            min-height: 100vh;
+        }
+        
+        .page-section.active {
             display: flex;
+        }
+        
+        /* Brand link */
+        .brand {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            font-weight: 700;
+            color: #333;
+            text-decoration: none;
+            font-size: 1.1rem;
+            z-index: 1000;
+            cursor: pointer;
+        }
+        
+        /* HOME PAGE STYLES */
+        #home-page {
             flex-direction: column;
             align-items: center;
             padding: 20px;
@@ -44,7 +71,7 @@
             font-weight: 700;
             color: #333;
             letter-spacing: -0.02em;
-            margin-bottom: 6px; /* tighten distance to h2 */
+            margin-bottom: 6px;
         }
         
         h2 {
@@ -52,7 +79,7 @@
             font-weight: 500;
             color: #444;
             text-align: center;
-            margin-bottom: 8px; /* spacing before button */
+            margin-bottom: 8px;
         }
 
         .upload-button {
@@ -79,40 +106,214 @@
         footer.legal {
             width: 100%;
             max-width: 900px;
-            margin-top: auto; /* stick to bottom */
+            margin-top: auto;
             color: #666;
             text-align: center;
             font-size: 0.95rem;
             line-height: 1.4;
             padding: 20px 10px 0;
         }
+        
+        footer.legal a {
+            color: #333;
+        }
+        
+        /* WAITING PAGE STYLES */
+        #waiting-page {
+            background: #000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .wrap {
+            width: 100vw;
+            padding-left: 2vw;
+            padding-right: 2vw;
+        }
+        
+        video {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 100vh;
+        }
+        
+        /* RESULT PAGE STYLES */
+        #result-page {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        #result-page h1 {
+            font-size: clamp(2rem, 6vw, 6rem);
+            margin-bottom: 24px;
+        }
+        
+        .image-wrap {
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+        }
+        
+        .image-wrap img {
+            max-width: min(90vw, 900px);
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            display: block;
+        }
+        
+        .caption {
+            margin-top: 16px;
+            font-size: 1.5rem;
+            color: #444;
+            letter-spacing: 0.3px;
+            text-align: center;
+        }
+        
+        .back-link {
+            margin-top: 24px;
+            font-size: 1rem;
+            color: #333;
+            text-decoration: underline;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <a href="/" class="brand" style="position:fixed; top:16px; left:16px; font-weight:700; color:#333; text-decoration:none; font-size:1.1rem;">Ratemepls</a>
-    <main class="main">
-        <h1>Rate photo attractiveness with AI</h1>
-        <h2>For $1 you can evaluate 50 images. We don't store your photos after we process them</h2>
-        <label for="photo-upload" class="upload-button">
-            Upload Photo
-        </label>
-        <input type="file" id="photo-upload" accept="image/*">
-    </main>
+    <a class="brand" onclick="goToHome()">Ratemepls</a>
+    
+    <!-- HOME PAGE -->
+    <div id="home-page" class="page-section active">
+        <main class="main">
+            <h1>Rate photo attractiveness with AI</h1>
+            <h2>For $1 you can evaluate 50 images. We don't store your photos after we process them</h2>
+            <label for="photo-upload" class="upload-button">
+                Upload Photo
+            </label>
+            <input type="file" id="photo-upload" accept="image/*">
+        </main>
+        <footer class="legal">If you're unhappy for any reason, email us at <a href="mailto:true00american@gmail.com">true00american@gmail.com</a> within 14 days of purchase and we'll refund your payment in full.</footer>
+    </div>
+    
+    <!-- WAITING PAGE -->
+    <div id="waiting-page" class="page-section">
+        <div class="wrap">
+            <video id="waiting-video" src="https://animation-files.bleuje.com/2024/2024_trefoildigits.mp4" autoplay muted loop playsinline></video>
+        </div>
+    </div>
+    
+    <!-- RESULT PAGE -->
+    <div id="result-page" class="page-section">
+        <div class="image-wrap">
+            <img id="result-image" alt="Uploaded photo">
+        </div>
+        <div class="caption" id="score-text">Processing...</div>
+        <a class="back-link" onclick="goToHome()">Upload another photo</a>
+    </div>
     
     <script>
-        const fileInput = document.getElementById('photo-upload');
+        // Navigation functions
+        function showPage(pageId) {
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+        }
         
+        function goToHome() {
+            // Clear session storage
+            sessionStorage.removeItem('jobId');
+            sessionStorage.removeItem('uploadedImageDataUrl');
+            sessionStorage.removeItem('raw_score');
+            sessionStorage.removeItem('percentile');
+            // Reset file input
+            document.getElementById('photo-upload').value = '';
+            showPage('home-page');
+        }
+        
+        function goToWaiting() {
+            showPage('waiting-page');
+            processImage();
+        }
+        
+        function goToResult() {
+            showPage('result-page');
+            displayResult();
+        }
+        
+        // File upload handler
+        const fileInput = document.getElementById('photo-upload');
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
                 sessionStorage.setItem('uploadedImageDataUrl', ev.target.result);
-                window.location.href = 'waiting/';
+                goToWaiting();
             };
             reader.readAsDataURL(file);
         });
+        
+        // Process image with API
+        async function processImage() {
+            const start = Date.now();
+            let id = sessionStorage.getItem('jobId');
+            
+            if (!id) {
+                const dataUrl = sessionStorage.getItem('uploadedImageDataUrl') || '';
+                const base64Image = dataUrl.split(',')[1] || '';
+                const runRes = await fetch('https://api.runpod.ai/v2/t20dfqb9no6wiz/run', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer rpa_XOVY7PSJZ97BEIAJ04PPQL1G8D7DGPD120A6FMR9gsyylk'
+                    },
+                    body: JSON.stringify({ input: { image: base64Image } })
+                });
+                const runJson = await runRes.json();
+                id = runJson.id;
+                sessionStorage.setItem('jobId', id);
+            }
+            
+            while (true) {
+                const r = await fetch(`https://api.runpod.ai/v2/t20dfqb9no6wiz/status/${id}`, {
+                    headers: { 'Authorization': 'Bearer rpa_XOVY7PSJZ97BEIAJ04PPQL1G8D7DGPD120A6FMR9gsyylk' }
+                });
+                const j = await r.json();
+                
+                if (j.status === 'COMPLETED') {
+                    const elapsed = Date.now() - start;
+                    const remaining = 3000 - elapsed;
+                    if (remaining > 0) { 
+                        await new Promise(res => setTimeout(res, remaining)); 
+                    }
+                    sessionStorage.setItem('raw_score', String(j.output.raw_score));
+                    sessionStorage.setItem('percentile', String(j.output.percentile));
+                    goToResult();
+                    break;
+                }
+                await new Promise(res => setTimeout(res, 1500));
+            }
+        }
+        
+        // Display result
+        function displayResult() {
+            const imgDataUrl = sessionStorage.getItem('uploadedImageDataUrl');
+            const imgEl = document.getElementById('result-image');
+            const scoreEl = document.getElementById('score-text');
+            
+            imgEl.src = imgDataUrl || '';
+            
+            const rawScore = sessionStorage.getItem('raw_score');
+            const percentile = sessionStorage.getItem('percentile');
+            scoreEl.textContent = `Raw score: ${rawScore} Percentile: ${percentile}`;
+        }
     </script>
-    <footer class="legal">If you’re unhappy for any reason, email us at <a href="mailto:true00american@gmail.com">true00american@gmail.com</a> within 14 days of purchase and we’ll refund your payment in full.</footer>
 </body>
 </html>

@@ -70,7 +70,9 @@
         const imgEl = document.getElementById('result-image');
         const scoreEl = document.getElementById('score-text');
         imgEl.src = imgDataUrl || '';
-        scoreEl.textContent = `Your photo is better than ${sessionStorage.getItem('avgPooling')}% of others`;
+        const rawScore = sessionStorage.getItem('raw_score');
+        const percentile = sessionStorage.getItem('percentile');
+        scoreEl.textContent = `Raw score: ${rawScore} Percentile: ${percentile}`;
     </script>
 </body>
 </html>
