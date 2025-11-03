@@ -264,26 +264,29 @@
         async function processImage() {
             const start = Date.now();
             let id = sessionStorage.getItem('jobId');
+            console.log('Job ID from storage:', id);
             
-            if (!id) {
+            if (!id || id === 'undefined') {
                 const dataUrl = sessionStorage.getItem('uploadedImageDataUrl') || '';
                 const base64Image = dataUrl.split(',')[1] || '';
-                const runRes = await fetch('https://api.runpod.ai/v2/t20dfqb9no6wiz/run', {
+                const runRes = await fetch('https://api.runpod.ai/v2/9j0r47plulo6tz/run', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer rpa_XOVY7PSJZ97BEIAJ04PPQL1G8D7DGPD120A6FMR9gsyylk'
+                        'Authorization': 'Bearer rpa_R145QKY5AUN7RGVFYLR19F40MF5QBVO7R0SK88M8qep8f4'
                     },
                     body: JSON.stringify({ input: { image: base64Image } })
                 });
                 const runJson = await runRes.json();
+                console.log('Run API response:', runJson);
                 id = runJson.id;
+                console.log('Extracted job ID:', id);
                 sessionStorage.setItem('jobId', id);
             }
             
             while (true) {
-                const r = await fetch(`https://api.runpod.ai/v2/t20dfqb9no6wiz/status/${id}`, {
-                    headers: { 'Authorization': 'Bearer rpa_XOVY7PSJZ97BEIAJ04PPQL1G8D7DGPD120A6FMR9gsyylk' }
+                const r = await fetch(`https://api.runpod.ai/v2/9j0r47plulo6tz/status/${id}`, {
+                    headers: { 'Authorization': 'Bearer rpa_R145QKY5AUN7RGVFYLR19F40MF5QBVO7R0SK88M8qep8f4' }
                 });
                 const j = await r.json();
                 
@@ -312,7 +315,9 @@
             
             const rawScore = sessionStorage.getItem('raw_score');
             const percentile = sessionStorage.getItem('percentile');
-            scoreEl.textContent = `Raw score: ${rawScore} Percentile: ${percentile}`;
+            console.log(`Raw score: ${rawScore}`)
+            const percentileValue = (parseFloat(percentile) * 100).toFixed(1);
+            scoreEl.textContent = `Your photo is better than: ${percentileValue}% of others`;
         }
     </script>
 </body>
