@@ -232,6 +232,7 @@
             sessionStorage.removeItem('uploadedImageDataUrl');
             sessionStorage.removeItem('raw_score');
             sessionStorage.removeItem('percentile');
+            sessionStorage.removeItem('blocked');
             // Reset file input
             document.getElementById('photo-upload').value = '';
             showPage('home-page');
@@ -296,12 +297,19 @@
                     if (remaining > 0) { 
                         await new Promise(res => setTimeout(res, remaining)); 
                     }
-                    sessionStorage.setItem('raw_score', String(j.output.raw_score));
-                    sessionStorage.setItem('percentile', String(j.output.percentile));
+                    if (j.output && j.output.blocked) {
+                        sessionStorage.setItem('blocked', String(j.output.blocked));
+                        sessionStorage.removeItem('raw_score');
+                        sessionStorage.removeItem('percentile');
+                    } else {
+                        sessionStorage.removeItem('blocked');
+                        sessionStorage.setItem('raw_score', String(j.output.raw_score));
+                        sessionStorage.setItem('percentile', String(j.output.percentile));
+                    }
                     goToResult();
                     break;
                 }
-                await new Promise(res => setTimeout(res, 1500));
+                await new Promise(res => setTimeout(res, 1000));
             }
         }
         
@@ -313,6 +321,11 @@
             
             imgEl.src = imgDataUrl || '';
             
+            const blocked = sessionStorage.getItem('blocked');
+            if (blocked) {
+                scoreEl.textContent = blocked;
+                return;
+            }
             const rawScore = sessionStorage.getItem('raw_score');
             const percentile = sessionStorage.getItem('percentile');
             console.log(`Raw score: ${rawScore}`)
