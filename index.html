@@ -168,6 +168,60 @@
             display: block;
         }
         
+        .images-container {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        
+        .image-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .image-item img {
+            max-width: min(28vw, 300px);
+            max-height: 50vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            display: block;
+        }
+        
+        .image-label {
+            font-size: 1rem;
+            color: #666;
+            text-align: center;
+        }
+        
+        .overlay-container {
+            position: relative;
+            display: inline-block;
+            max-width: min(28vw, 300px);
+        }
+        
+        .overlay-container img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+        
+        .overlay-container .overlay-heatmap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
         .caption {
             margin-top: 16px;
             font-size: 1.5rem;
@@ -210,8 +264,22 @@
     
     <!-- RESULT PAGE -->
     <div id="result-page" class="page-section">
-        <div class="image-wrap">
-            <img id="result-image" alt="Uploaded photo">
+        <div class="images-container" id="images-container">
+            <div class="image-item">
+                <img id="result-image" alt="Original photo">
+                <div class="image-label">Original</div>
+            </div>
+            <div class="image-item">
+                <img id="heatmap-image" alt="Heatmap" style="display: none;">
+                <div class="image-label">Heatmap</div>
+            </div>
+            <div class="image-item">
+                <div class="overlay-container" id="overlay-container" style="display: none;">
+                    <img id="overlay-original" alt="Original">
+                    <img id="overlay-heatmap" class="overlay-heatmap" alt="Heatmap overlay">
+                </div>
+                <div class="image-label">Overlay</div>
+            </div>
         </div>
         <div class="caption" id="score-text">Processing...</div>
         <a class="back-link" onclick="goToHome()">Upload another photo</a>
@@ -233,6 +301,7 @@
             sessionStorage.removeItem('raw_score');
             sessionStorage.removeItem('percentile');
             sessionStorage.removeItem('blocked');
+            sessionStorage.removeItem('heatmap');
             // Reset file input
             document.getElementById('photo-upload').value = '';
             showPage('home-page');
@@ -301,10 +370,14 @@
                         sessionStorage.setItem('blocked', String(j.output.blocked));
                         sessionStorage.removeItem('raw_score');
                         sessionStorage.removeItem('percentile');
+                        sessionStorage.removeItem('heatmap');
                     } else {
                         sessionStorage.removeItem('blocked');
                         sessionStorage.setItem('raw_score', String(j.output.raw_score));
                         sessionStorage.setItem('percentile', String(j.output.percentile));
+                        if (j.output.heatmap) {
+                            sessionStorage.setItem('heatmap', j.output.heatmap);
+                        }
                     }
                     goToResult();
                     break;
@@ -317,6 +390,10 @@
         function displayResult() {
             const imgDataUrl = sessionStorage.getItem('uploadedImageDataUrl');
             const imgEl = document.getElementById('result-image');
+            const heatmapEl = document.getElementById('heatmap-image');
+            const overlayContainer = document.getElementById('overlay-container');
+            const overlayOriginal = document.getElementById('overlay-original');
+            const overlayHeatmap = document.getElementById('overlay-heatmap');
             const scoreEl = document.getElementById('score-text');
             
             imgEl.src = imgDataUrl || '';
@@ -326,6 +403,23 @@
                 scoreEl.textContent = blocked;
                 return;
             }
+            
+            const heatmapBase64 = sessionStorage.getItem('heatmap');
+            if (heatmapBase64) {
+                // Display heatmap
+                heatmapEl.src = 'data:image/png;base64,' + heatmapBase64;
+                heatmapEl.style.display = 'block';
+                
+                // Create overlay
+                overlayOriginal.src = imgDataUrl;
+                overlayOriginal.onload = function() {
+                    overlayHeatmap.src = 'data:image/png;base64,' + heatmapBase64;
+                    overlayHeatmap.onload = function() {
+                        overlayContainer.style.display = 'block';
+                    };
+                };
+            }
+            
             const rawScore = sessionStorage.getItem('raw_score');
             const percentile = sessionStorage.getItem('percentile');
             console.log(`Raw score: ${rawScore}`)
