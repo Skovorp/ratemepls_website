@@ -335,26 +335,23 @@
         // Process image with API
         async function processImage() {
             const start = Date.now();
-            let id = sessionStorage.getItem('jobId');
-            console.log('Job ID from storage:', id);
             
-            if (!id || id === 'undefined') {
-                const dataUrl = sessionStorage.getItem('uploadedImageDataUrl') || '';
-                const base64Image = dataUrl.split(',')[1] || '';
-                const runRes = await fetch('https://api.runpod.ai/v2/9j0r47plulo6tz/run', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer rpa_R145QKY5AUN7RGVFYLR19F40MF5QBVO7R0SK88M8qep8f4'
-                    },
-                    body: JSON.stringify({ input: { image: base64Image } })
-                });
-                const runJson = await runRes.json();
-                console.log('Run API response:', runJson);
-                id = runJson.id;
-                console.log('Extracted job ID:', id);
-                sessionStorage.setItem('jobId', id);
-            }
+            // Always create a new job for each upload
+            const dataUrl = sessionStorage.getItem('uploadedImageDataUrl') || '';
+            const base64Image = dataUrl.split(',')[1] || '';
+            const runRes = await fetch('https://api.runpod.ai/v2/9j0r47plulo6tz/run', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer rpa_R145QKY5AUN7RGVFYLR19F40MF5QBVO7R0SK88M8qep8f4'
+                },
+                body: JSON.stringify({ input: { image: base64Image } })
+            });
+            const runJson = await runRes.json();
+            console.log('Run API response:', runJson);
+            const id = runJson.id;
+            console.log('Extracted job ID:', id);
+            sessionStorage.setItem('jobId', id);
             
             // Store the current jobId to detect stale responses
             const currentJobId = id;
