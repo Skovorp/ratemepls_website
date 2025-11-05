@@ -322,6 +322,8 @@
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
+            // Clear old jobId when uploading a new image
+            sessionStorage.removeItem('jobId');
             const reader = new FileReader();
             reader.onload = function(ev) {
                 sessionStorage.setItem('uploadedImageDataUrl', ev.target.result);
@@ -354,13 +356,37 @@
                 sessionStorage.setItem('jobId', id);
             }
             
+            // Store the current jobId to detect stale responses
+            const currentJobId = id;
+            
             while (true) {
+                // Check if jobId has changed (new upload started), if so exit this loop
+                const storedJobId = sessionStorage.getItem('jobId');
+                if (storedJobId !== currentJobId) {
+                    console.log('Job ID changed, aborting old request');
+                    break;
+                }
+                
                 const r = await fetch(`https://api.runpod.ai/v2/9j0r47plulo6tz/status/${id}`, {
                     headers: { 'Authorization': 'Bearer rpa_R145QKY5AUN7RGVFYLR19F40MF5QBVO7R0SK88M8qep8f4' }
                 });
                 const j = await r.json();
                 
+                // Double-check jobId hasn't changed before processing response
+                const latestJobId = sessionStorage.getItem('jobId');
+                if (latestJobId !== currentJobId) {
+                    console.log('Job ID changed during request, ignoring response');
+                    break;
+                }
+                
                 if (j.status === 'COMPLETED') {
+                    // Final check before processing completed response
+                    const finalJobId = sessionStorage.getItem('jobId');
+                    if (finalJobId !== currentJobId) {
+                        console.log('Job ID changed before processing result, ignoring');
+                        break;
+                    }
+                    
                     const elapsed = Date.now() - start;
                     const remaining = 1000 - elapsed;
                     if (remaining > 0) { 
