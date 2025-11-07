@@ -237,6 +237,123 @@
             text-decoration: underline;
             cursor: pointer;
         }
+        
+        /* Similar Images Slider Styles */
+        .similar-images-section {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 32px;
+            padding: 0 20px;
+        }
+        
+        .similar-images-title {
+            font-size: 1.5rem;
+            color: #444;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .images-slider {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .slider-container {
+            display: flex;
+            transition: transform 0.3s ease;
+            gap: 16px;
+            touch-action: pan-y pinch-zoom;
+            will-change: transform;
+        }
+        
+        /* Ensure desktop doesn't scroll */
+        @media (min-width: 769px) {
+            .images-slider {
+                overflow: hidden !important;
+            }
+            
+            .slider-container {
+                touch-action: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .images-slider {
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                scroll-behavior: smooth;
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none; /* IE and Edge */
+            }
+            
+            .images-slider::-webkit-scrollbar {
+                display: none; /* Chrome, Safari, Opera */
+            }
+            
+            .slider-container {
+                transition: none;
+                touch-action: pan-x;
+            }
+        }
+        
+        .slider-image {
+            flex: 0 0 auto;
+            max-height: 400px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .slider-image:hover {
+            transform: scale(1.05);
+        }
+        
+        .slider-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+        
+        .slider-button:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .slider-button.prev {
+            left: 10px;
+        }
+        
+        .slider-button.next {
+            right: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .slider-image {
+                max-height: 300px;
+            }
+            
+            .slider-button {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -282,6 +399,14 @@
             </div>
         </div>
         <div class="caption" id="score-text">Processing...</div>
+        <div class="similar-images-section" id="similar-images-section" style="display: none;">
+            <div class="similar-images-title">Random images that may or may not have a similar score</div>
+            <div class="images-slider">
+                <button class="slider-button prev" id="prev-button" onclick="slideImages(-1)">‹</button>
+                <div class="slider-container" id="slider-container"></div>
+                <button class="slider-button next" id="next-button" onclick="slideImages(1)">›</button>
+            </div>
+        </div>
         <a class="back-link" onclick="goToHome()">Upload another photo</a>
     </div>
     
@@ -302,6 +427,7 @@
             sessionStorage.removeItem('percentile');
             sessionStorage.removeItem('blocked');
             sessionStorage.removeItem('heatmap');
+            sessionStorage.removeItem('similar_images');
             // Reset file input
             document.getElementById('photo-upload').value = '';
             showPage('home-page');
@@ -394,12 +520,16 @@
                         sessionStorage.removeItem('raw_score');
                         sessionStorage.removeItem('percentile');
                         sessionStorage.removeItem('heatmap');
+                        sessionStorage.removeItem('similar_images');
                     } else {
                         sessionStorage.removeItem('blocked');
                         sessionStorage.setItem('raw_score', String(j.output.raw_score));
                         sessionStorage.setItem('percentile', String(j.output.percentile));
                         if (j.output.heatmap) {
                             sessionStorage.setItem('heatmap', j.output.heatmap);
+                        }
+                        if (j.output.similar_images && Array.isArray(j.output.similar_images)) {
+                            sessionStorage.setItem('similar_images', JSON.stringify(j.output.similar_images));
                         }
                     }
                     goToResult();
@@ -448,7 +578,402 @@
             console.log(`Raw score: ${rawScore}`)
             const percentileValue = (parseFloat(percentile) * 100).toFixed(1);
             scoreEl.textContent = `Your photo is better than: ${percentileValue}% of others`;
+            
+            // Display similar images if available
+            const similarImagesJson = sessionStorage.getItem('similar_images');
+            if (similarImagesJson) {
+                try {
+                    const similarImages = JSON.parse(similarImagesJson);
+                    if (similarImages && similarImages.length > 0) {
+                        displaySimilarImages(similarImages);
+                    }
+                } catch (e) {
+                    console.error('Error parsing similar images:', e);
+                }
+            }
         }
+        
+        // Slider state
+        let sliderImages = [];
+        let originalImageCount = 0;
+        let isTransitioning = false;
+        let mobileScrollHandlerAttached = false;
+        let isInitializing = false;
+        
+        function displaySimilarImages(images) {
+            const section = document.getElementById('similar-images-section');
+            const container = document.getElementById('slider-container');
+            const slider = document.querySelector('.images-slider');
+            
+            section.style.display = 'block';
+            container.innerHTML = '';
+            sliderImages = images;
+            originalImageCount = images.length;
+            isTransitioning = false;
+            mobileScrollHandlerAttached = false; // Reset handler flag when displaying new images
+            isInitializing = false; // Reset initialization flag
+            
+            // Reset scroll position on desktop
+            if (slider && !isMobile()) {
+                slider.scrollLeft = 0;
+            }
+            
+            let loadedCount = 0;
+            const totalImages = images.length;
+            
+            // Create original images
+            images.forEach((imageUrl, index) => {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = `Similar image ${index + 1}`;
+                img.className = 'slider-image';
+                img.dataset.index = index;
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        initializeSlider();
+                    }
+                };
+                img.onload = function() {
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        initializeSlider();
+                    }
+                };
+                container.appendChild(img);
+            });
+            
+            // If all images are already loaded (cached), initialize immediately
+            if (container.children.length > 0 && container.children[0].complete) {
+                setTimeout(initializeSlider, 100);
+            }
+        }
+        
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+        
+        function initializeSlider() {
+            if (isInitializing) return;
+            
+            const container = document.getElementById('slider-container');
+            const slider = document.querySelector('.images-slider');
+            const visibleImages = Array.from(container.children).filter(img => img.style.display !== 'none');
+            
+            if (visibleImages.length === 0) {
+                return;
+            }
+            
+            // Check if already initialized (has clones)
+            const hasClones = Array.from(container.children).some(img => img.dataset.clone);
+            if (hasClones) {
+                isInitializing = false;
+                return;
+            }
+            
+            isInitializing = true;
+            
+            // Ensure all images have loaded and have dimensions
+            const checkImagesLoaded = () => {
+                const allLoaded = visibleImages.every(img => {
+                    return img.complete && img.naturalWidth > 0 && img.offsetWidth > 0;
+                });
+                return allLoaded;
+            };
+            
+            if (!checkImagesLoaded()) {
+                // Wait for images to load
+                let loadedCount = 0;
+                const totalImages = visibleImages.length;
+                
+                visibleImages.forEach(img => {
+                    if (img.complete && img.naturalWidth > 0) {
+                        loadedCount++;
+                    } else {
+                        const originalOnload = img.onload;
+                        img.onload = function() {
+                            if (originalOnload) originalOnload.call(this);
+                            loadedCount++;
+                            if (loadedCount === totalImages) {
+                                isInitializing = false;
+                                setTimeout(() => initializeSlider(), 50);
+                            }
+                        };
+                    }
+                });
+                if (loadedCount === totalImages) {
+                    isInitializing = false;
+                    setTimeout(() => initializeSlider(), 50);
+                } else {
+                    isInitializing = false;
+                }
+                return;
+            }
+            
+            // Wait a bit to ensure images are rendered and have dimensions
+            setTimeout(() => {
+                // Clone images for infinite loop: add clones at the end and beginning
+                const originalImages = Array.from(visibleImages);
+                
+                // Clone all images and prepend at the beginning (start clones)
+                originalImages.forEach(img => {
+                    const clone = img.cloneNode(true);
+                    clone.dataset.clone = 'start';
+                    container.insertBefore(clone, container.firstChild);
+                });
+                
+                // Clone all images and append at the end (end clones)
+                originalImages.forEach(img => {
+                    const clone = img.cloneNode(true);
+                    clone.dataset.clone = 'end';
+                    container.appendChild(clone);
+                });
+                
+                // Wait for clones to render, then position slider
+                requestAnimationFrame(() => {
+                    // Wait another frame to ensure clones are rendered
+                    requestAnimationFrame(() => {
+                        const startClones = Array.from(container.children).filter(img => img.dataset.clone === 'start');
+                        const startClonesWidth = getTotalWidth(startClones);
+                        
+                        if (startClonesWidth === 0) {
+                            // If width is still 0, wait a bit more
+                            setTimeout(() => initializeSlider(), 100);
+                            return;
+                        }
+                        
+                        if (isMobile()) {
+                            // On mobile, use native scrolling
+                            container.style.transform = 'none';
+                            // Ensure scroll position is reset
+                            slider.scrollLeft = 0;
+                            // Scroll to start of original images
+                            requestAnimationFrame(() => {
+                                slider.scrollLeft = startClonesWidth;
+                                // Add scroll listener for infinite loop
+                                setupMobileScrollHandler();
+                            });
+                        } else {
+                            // On desktop, use transform and ensure no scrolling
+                            slider.scrollLeft = 0;
+                            container.style.transition = 'none';
+                            container.style.transform = `translateX(-${startClonesWidth}px)`;
+                            
+                            // Force reflow
+                            container.offsetHeight;
+                            
+                            // Re-enable transition
+                            container.style.transition = 'transform 0.3s ease';
+                        }
+                        
+                        isInitializing = false;
+                    });
+                });
+            }, 100);
+        }
+        
+        function setupMobileScrollHandler() {
+            if (mobileScrollHandlerAttached) return;
+            
+            const slider = document.querySelector('.images-slider');
+            if (!slider) return;
+            
+            // Remove any existing listener
+            const scrollHandler = function() {
+                if (!isMobile()) return;
+                checkMobileScrollLoop();
+            };
+            
+            slider.addEventListener('scroll', scrollHandler, { passive: true });
+            mobileScrollHandlerAttached = true;
+        }
+        
+        function checkMobileScrollLoop() {
+            if (!isMobile()) return;
+            
+            const slider = document.querySelector('.images-slider');
+            const container = document.getElementById('slider-container');
+            const allImages = Array.from(container.children).filter(img => img.style.display !== 'none');
+            
+            if (allImages.length === 0) return;
+            
+            const originalImages = allImages.filter(img => !img.dataset.clone);
+            const startClones = allImages.filter(img => img.dataset.clone === 'start');
+            const endClones = allImages.filter(img => img.dataset.clone === 'end');
+            
+            if (originalImages.length === 0) return;
+            
+            // Calculate widths
+            const startClonesWidth = getTotalWidth(startClones);
+            const originalWidth = getTotalWidth(originalImages);
+            const endClonesWidth = getTotalWidth(endClones);
+            
+            const scrollLeft = slider.scrollLeft;
+            
+            // If scrolled past end clones, jump to start of originals
+            if (scrollLeft >= startClonesWidth + originalWidth + endClonesWidth - 10) {
+                slider.scrollLeft = startClonesWidth + 1;
+            }
+            // If scrolled before start clones, jump to end of originals
+            else if (scrollLeft <= startClonesWidth - 10) {
+                slider.scrollLeft = startClonesWidth + originalWidth - 1;
+            }
+        }
+        
+        function getTotalWidth(images) {
+            if (!images || images.length === 0) return 0;
+            return images.reduce((total, img) => {
+                const width = img.offsetWidth || img.clientWidth || 0;
+                return total + width + 16; // width + gap
+            }, 0);
+        }
+        
+        function getCurrentTranslateX() {
+            const container = document.getElementById('slider-container');
+            const transform = container.style.transform;
+            if (!transform || transform === 'none') return 0;
+            const match = transform.match(/translateX\((-?\d+(?:\.\d+)?)px\)/);
+            return match ? parseFloat(match[1]) : 0;
+        }
+        
+        function slideImages(direction) {
+            // On mobile, use native scrolling instead of buttons
+            if (isMobile()) {
+                const slider = document.querySelector('.images-slider');
+                const container = document.getElementById('slider-container');
+                const allImages = Array.from(container.children).filter(img => img.style.display !== 'none');
+                
+                if (allImages.length === 0) return;
+                
+                const scrollAmount = slider.clientWidth * 0.8; // Scroll by 80% of viewport width
+                const newScrollLeft = slider.scrollLeft + (direction > 0 ? scrollAmount : -scrollAmount);
+                slider.scrollTo({
+                    left: newScrollLeft,
+                    behavior: 'smooth'
+                });
+                return;
+            }
+            
+            if (isTransitioning) return;
+            
+            const container = document.getElementById('slider-container');
+            const allImages = Array.from(container.children).filter(img => img.style.display !== 'none');
+            
+            if (allImages.length === 0) return;
+            
+            isTransitioning = true;
+            const currentX = getCurrentTranslateX();
+            
+            // Find the first image that's at least partially visible
+            let accumulatedWidth = 0;
+            let visibleImageIndex = -1;
+            
+            for (let i = 0; i < allImages.length; i++) {
+                const img = allImages[i];
+                const imgWidth = img.offsetWidth + 16;
+                
+                if (accumulatedWidth <= Math.abs(currentX) && Math.abs(currentX) < accumulatedWidth + imgWidth) {
+                    visibleImageIndex = i;
+                    break;
+                }
+                accumulatedWidth += imgWidth;
+            }
+            
+            // If we couldn't find the visible image, estimate based on position
+            if (visibleImageIndex === -1) {
+                // Find closest image
+                let closestIndex = 0;
+                let minDist = Infinity;
+                accumulatedWidth = 0;
+                for (let i = 0; i < allImages.length; i++) {
+                    const img = allImages[i];
+                    const imgWidth = img.offsetWidth + 16;
+                    const center = accumulatedWidth + imgWidth / 2;
+                    const dist = Math.abs(Math.abs(currentX) - center);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestIndex = i;
+                    }
+                    accumulatedWidth += imgWidth;
+                }
+                visibleImageIndex = closestIndex;
+            }
+            
+            // Calculate slide distance - move to next/previous image
+            let slideDistance = 0;
+            if (direction > 0) {
+                // Moving right - slide to show next image
+                if (visibleImageIndex < allImages.length - 1) {
+                    slideDistance = allImages[visibleImageIndex].offsetWidth + 16;
+                }
+            } else {
+                // Moving left - slide to show previous image
+                if (visibleImageIndex > 0) {
+                    slideDistance = -(allImages[visibleImageIndex - 1].offsetWidth + 16);
+                }
+            }
+            
+            const newX = currentX - slideDistance;
+            container.style.transform = `translateX(${newX}px)`;
+            
+            // Check if we need to loop after transition
+            setTimeout(() => {
+                checkAndLoop();
+                isTransitioning = false;
+            }, 300);
+        }
+        
+        function checkAndLoop() {
+            if (isMobile()) {
+                checkMobileScrollLoop();
+                return;
+            }
+            
+            const container = document.getElementById('slider-container');
+            const allImages = Array.from(container.children).filter(img => img.style.display !== 'none');
+            const currentX = getCurrentTranslateX();
+            
+            // Get original images (excluding clones)
+            const originalImages = allImages.filter(img => !img.dataset.clone);
+            const startClones = allImages.filter(img => img.dataset.clone === 'start');
+            
+            if (originalImages.length === 0) return;
+            
+            // Calculate widths
+            const startClonesWidth = getTotalWidth(startClones);
+            const originalWidth = getTotalWidth(originalImages);
+            const endClonesWidth = getTotalWidth(allImages.filter(img => img.dataset.clone === 'end'));
+            const totalWidth = startClonesWidth + originalWidth + endClonesWidth;
+            
+            // If we've scrolled past the end clones, jump to start of originals (seamless)
+            if (Math.abs(currentX) >= startClonesWidth + originalWidth + endClonesWidth - 10) {
+                container.style.transition = 'none';
+                container.style.transform = `translateX(-${startClonesWidth}px)`;
+                container.offsetHeight; // Force reflow
+                container.style.transition = 'transform 0.3s ease';
+            }
+            // If we've scrolled before the start clones, jump to end of originals (seamless)
+            else if (Math.abs(currentX) <= startClonesWidth - 10) {
+                container.style.transition = 'none';
+                container.style.transform = `translateX(-${startClonesWidth + originalWidth}px)`;
+                container.offsetHeight; // Force reflow
+                container.style.transition = 'transform 0.3s ease';
+            }
+        }
+        
+        // Update slider position on window resize
+        window.addEventListener('resize', function() {
+            const section = document.getElementById('similar-images-section');
+            if (section && section.style.display !== 'none') {
+                // Reinitialize slider to handle new image sizes and mobile/desktop switch
+                setTimeout(() => {
+                    if (sliderImages.length > 0) {
+                        displaySimilarImages(sliderImages);
+                    }
+                }, 100);
+            }
+        });
     </script>
 </body>
 </html>
