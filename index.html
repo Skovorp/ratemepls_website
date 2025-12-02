@@ -178,6 +178,10 @@
             margin-bottom: 16px;
         }
         
+        #bottom-images-container {
+            margin-top: 32px;
+        }
+        
         .image-item {
             display: flex;
             flex-direction: column;
@@ -244,6 +248,7 @@
             max-width: 1200px;
             margin-top: 32px;
             padding: 0 20px;
+            display: none !important;
         }
         
         .similar-images-title {
@@ -363,13 +368,13 @@
     <div id="home-page" class="page-section active">
         <main class="main">
             <h1>Rate photo attractiveness with AI</h1>
-            <h2>For $1 you can evaluate 50 images. We don't store your photos after we process them</h2>
+            <!-- <h2>For $1 you can evaluate 50 images. We don't store your photos after we process them</h2> -->
             <label for="photo-upload" class="upload-button">
                 Upload Photo
             </label>
             <input type="file" id="photo-upload" accept="image/*">
         </main>
-        <footer class="legal">If you're unhappy for any reason, email us at <a href="mailto:ratemepls@gmail.com">ratemepls@gmail.com</a> within 14 days of purchase and we'll refund your payment in full.</footer>
+        <!-- <footer class="legal">If you're unhappy for any reason, email us at <a href="mailto:ratemepls@gmail.com">ratemepls@gmail.com</a> within 14 days of purchase and we'll refund your payment in full.</footer> -->
     </div>
     
     <!-- WAITING PAGE -->
@@ -386,6 +391,10 @@
                 <img id="result-image" alt="Original photo">
                 <div class="image-label">Original</div>
             </div>
+        </div>
+        <div class="caption" id="score-text">Processing...</div>
+        <a class="back-link" onclick="goToHome()">Upload another photo</a>
+        <div class="images-container" id="bottom-images-container">
             <div class="image-item">
                 <img id="heatmap-image" alt="Heatmap" style="display: none;">
                 <div class="image-label">Heatmap</div>
@@ -398,7 +407,6 @@
                 <div class="image-label">Overlay</div>
             </div>
         </div>
-        <div class="caption" id="score-text">Processing...</div>
         <div class="similar-images-section" id="similar-images-section" style="display: none;">
             <div class="similar-images-title">Random images that may or may not have a similar score</div>
             <div class="images-slider">
@@ -407,7 +415,6 @@
                 <button class="slider-button next" id="next-button" onclick="slideImages(1)">›</button>
             </div>
         </div>
-        <a class="back-link" onclick="goToHome()">Upload another photo</a>
     </div>
     
     <script>
